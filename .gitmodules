@@ -1,0 +1,3 @@
+[submodule "mri.git"]
+	path = mri
+	url = https://github.com/tlr-team/mri.git
