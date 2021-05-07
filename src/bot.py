@@ -1,7 +1,5 @@
 import logging
 
-from json import load
-from os.path import isfile
 from .handlers import bot
 
 logging.basicConfig(
