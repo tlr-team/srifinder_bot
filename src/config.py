@@ -17,7 +17,7 @@ def get_config():
 
 
 WELLCOME_MESSAGE = '''
-    Hello,
+    Hello, %s
     
     I was created to serve as client for a MRI implementation made by Roberto Martí and Leonel Alejandro. 
     

@@ -18,7 +18,7 @@ def is_typing_dec(f):
 @is_typing_dec
 @bot.message_handler(commands=['start'])
 def start(message):
-    bot.reply_to(message, WELLCOME_MESSAGE)
+    bot.reply_to(message, WELLCOME_MESSAGE % (message.from_user.first_name))
     help(message)
 
 
@@ -38,14 +38,15 @@ def change_dataset(message):
 @bot.message_handler(commands=['use_dataset'])
 def use_dataset(message):
     # todo: logic to change the dataset
-    bot.send_message(message.chat.id, 'Done.')
+    remove_board = types.ReplyKeyboardRemove()
+    bot.send_message(message.chat.id, 'Done.', reply_markup=remove_board)
 
 
 @is_typing_dec
 @bot.message_handler(commands=['getid'])
-def get_id(message):
-    chat_user_client = message
-    bot.send_message(message.chat.id, str(chat_user_client))
+def get_id(message: types.Message):
+    user_id = message.from_user.id
+    bot.send_message(message.chat.id, str(user_id))
 
 
 @is_typing_dec
