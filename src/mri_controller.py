@@ -11,22 +11,24 @@ class MriController:
     def _init_db(self, dataset: str):
         self._documents = load_documents(path='./mri/datasets/', dataset=self.CISI)
         self._queries = load_queries(path='./mri/datasets/', dataset=self.CISI)
-        self._model = IRM()
         self.current_dataset = dataset
+        self._model = IRM()
+        for d in self._documents:
+            self._model.add(d)
 
     def __init__(self, datasets: List[str] = None):
-        self.datasets = datasets if datasets is None else [self.CISI, self.CRAN]
+        self.datasets = [self.CISI, self.CRAN] if datasets is None else datasets
         self._model = None
         self._init_db(self.CISI)
 
     def change_dataset(self, name: str = CRAN):
-        if name in self._datasets:
+        if name in self.datasets:
             self._init_db(name)
-            return self._documents
-        return []
+            return len(self._documents)
+        return 0
 
     def execute_query(self, query: str) -> List[Document]:
-        return self.model.run_query(query, top=5)
+        return self._model.run_query(query, top=5)
 
     def get_document_abstract(self, title):
         return [d for d in self._documents if title == d.title]
