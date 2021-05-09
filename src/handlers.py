@@ -2,45 +2,53 @@ from logging import log
 from telebot import TeleBot
 from telebot import types
 from .config import get_config, WELLCOME_MESSAGE, HELP_MESSAGE
+from .mri_controller import MriController
 
 token, admin_users = get_config()
 bot = TeleBot(token)
+controller = MriController()
 
 
 def is_typing_dec(f):
-    def _internal_f(message):
+    def _internal_f(message: types.Message):
         bot.send_chat_action(message.chat.id, 'typing')
-        return f(message)
+        return f(message: types.Message)
 
     return _internal_f
 
 
 @is_typing_dec
 @bot.message_handler(commands=['start'])
-def start(message):
+def start(message: types.Message):
     bot.reply_to(message, WELLCOME_MESSAGE % (message.from_user.first_name))
-    help(message)
+    help(message: types.Message)
 
 
 @is_typing_dec
 @bot.message_handler(commands=['choose_dataset'])
-def change_dataset(message):
+def change_dataset(message: types.Message):
     bot.send_chat_action(message.chat.id, 'typing')
     markup = types.ReplyKeyboardMarkup(one_time_keyboard=True, row_width=1)
-    itembtcran = types.KeyboardButton('/use_dataset cran')
-    itembtcisi = types.KeyboardButton('/use_dataset cisi',)
-    markup.row(itembtcran)
-    markup.row(itembtcisi)
-    bot.send_message(message.chat.id, "Choose a dataset:", reply_markup=markup)
+    for ds in controller.datasets:
+        if ds is None or ds == '': continue
+        item = types.KeyboardButton('/use_dataset %s' % ds)
+        markup.row(item)
+    bot.send_message(message.chat.id, 'Choose a dataset:', reply_markup=markup)
 
 
 @is_typing_dec
 @bot.message_handler(commands=['use_dataset'])
-def use_dataset(message):
-    # todo: logic to change the dataset
-    remove_board = types.ReplyKeyboardRemove()
-    bot.send_message(message.chat.id, 'Done.', reply_markup=remove_board)
-
+def use_dataset(message: types.Message):
+    ds_c = message.text.split(' ')
+    ds = ds_c[1] if ds_c.count > 1 else ''
+    
+    if controller.change_dataset(name=ds):
+        remove_board = types.ReplyKeyboardRemove()
+        bot.send_message(message.chat.id, 'Done.', reply_markup=remove_board)
+    else:
+        remove_board = types.ReplyKeyboardRemove()
+        bot.send_message(message.chat.id, 'I can\'t find the dataset "%s".' % (ds), reply_markup=remove_board)
+        
 
 @is_typing_dec
 @bot.message_handler(commands=['getid'])
@@ -51,12 +59,12 @@ def get_id(message: types.Message):
 
 @is_typing_dec
 @bot.message_handler(commands=['help'])
-def help(message):
+def help(message: types.Message):
     bot.send_message(message.chat.id, HELP_MESSAGE)
 
 
 @bot.message_handler(commands=['get_report'])
-def get_report(message):
+def get_report(message: types.Message):
     bot.send_chat_action(message.chat.id, 'upload_document')
     doc = open('doc/report.zip', 'rb')
     bot.send_document(message.chat.id, doc)
@@ -68,7 +76,7 @@ def get_report(message):
 
 # Handle sticker message
 @bot.message_handler(content_types=['sticker'])
-def handle_stickers(message):
+def handle_stickers(message: types.Message):
     # (message.sticker.file_id)
     # bot.send_message(message.chat.id, f'{message.sticker.file_id}')
     bot.send_sticker(
@@ -79,11 +87,17 @@ def handle_stickers(message):
 
 @is_typing_dec
 @bot.message_handler(func=lambda m: True)
-def default_search(message):
+def default_search(message: types.Message):
     # todo logic for querie test here
-    # bot.send_message(message.chat.id, 'jlkjlj')
-    pass
+    docs :list= controller.execute_query(message.text)
+    if docs:
+        response = 'Results:\n\n\t'
+        response = response + '\n\n\t'.join([ "%s : %s "% (i, d)for i,d in enumerate(docs)]) 
+        bot.send_message(message.chat.id, response)
+    else:
+        bot.send_message(message.chat.id, 'Can\'t find anything, you may need to configure the dataset.')
+    
 
 
-def error(message):
+def error(message: types.Message):
     log('<--error-->')
