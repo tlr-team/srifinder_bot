@@ -8,6 +8,9 @@ token, admin_users = get_config()
 bot = TeleBot(token)
 controller = MriController()
 
+for admin in admin_users:
+    bot.send_message(admin, 'Initialized.')
+
 
 def is_typing_dec(f):
     def _internal_f(message: types.Message):
@@ -44,6 +47,7 @@ def use_dataset(message: types.Message):
     ds_c = message.text.split(' ')
     ds = '' if ds_c is None or len(ds_c) <= 1 else ds_c[1]
 
+    bot.send_message(message.chat.id, 'Please wait...')
     if controller.change_dataset(name=ds):
         remove_board = types.ReplyKeyboardRemove()
         bot.send_message(message.chat.id, 'Dataset loaded.', reply_markup=remove_board)
@@ -94,6 +98,7 @@ def handle_stickers(message: types.Message):
 @is_typing_dec
 @bot.message_handler(func=lambda m: True)
 def default_search(message: types.Message):
+    bot.send_message(message.chat.id, 'Please wait...')
     docs: list = controller.execute_query(message.text)
     if docs:
         response = 'Results:\n\n\t'
