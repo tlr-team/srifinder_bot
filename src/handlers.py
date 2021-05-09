@@ -12,7 +12,7 @@ controller = MriController()
 def is_typing_dec(f):
     def _internal_f(message: types.Message):
         bot.send_chat_action(message.chat.id, 'typing')
-        return f(message: types.Message)
+        return f(message)
 
     return _internal_f
 
@@ -21,7 +21,7 @@ def is_typing_dec(f):
 @bot.message_handler(commands=['start'])
 def start(message: types.Message):
     bot.reply_to(message, WELLCOME_MESSAGE % (message.from_user.first_name))
-    help(message: types.Message)
+    help(message)
 
 
 @is_typing_dec
@@ -30,7 +30,8 @@ def change_dataset(message: types.Message):
     bot.send_chat_action(message.chat.id, 'typing')
     markup = types.ReplyKeyboardMarkup(one_time_keyboard=True, row_width=1)
     for ds in controller.datasets:
-        if ds is None or ds == '': continue
+        if ds is None or ds == '':
+            continue
         item = types.KeyboardButton('/use_dataset %s' % ds)
         markup.row(item)
     bot.send_message(message.chat.id, 'Choose a dataset:', reply_markup=markup)
@@ -41,14 +42,18 @@ def change_dataset(message: types.Message):
 def use_dataset(message: types.Message):
     ds_c = message.text.split(' ')
     ds = ds_c[1] if ds_c.count > 1 else ''
-    
+
     if controller.change_dataset(name=ds):
         remove_board = types.ReplyKeyboardRemove()
         bot.send_message(message.chat.id, 'Done.', reply_markup=remove_board)
     else:
         remove_board = types.ReplyKeyboardRemove()
-        bot.send_message(message.chat.id, 'I can\'t find the dataset "%s".' % (ds), reply_markup=remove_board)
-        
+        bot.send_message(
+            message.chat.id,
+            'I can\'t find the dataset "%s".' % (ds),
+            reply_markup=remove_board,
+        )
+
 
 @is_typing_dec
 @bot.message_handler(commands=['getid'])
@@ -89,14 +94,18 @@ def handle_stickers(message: types.Message):
 @bot.message_handler(func=lambda m: True)
 def default_search(message: types.Message):
     # todo logic for querie test here
-    docs :list= controller.execute_query(message.text)
+    docs: list = controller.execute_query(message.text)
     if docs:
         response = 'Results:\n\n\t'
-        response = response + '\n\n\t'.join([ "%s : %s "% (i, d)for i,d in enumerate(docs)]) 
+        response = response + '\n\n\t'.join(
+            ["%s : %s " % (i, d) for i, d in enumerate(docs)]
+        )
         bot.send_message(message.chat.id, response)
     else:
-        bot.send_message(message.chat.id, 'Can\'t find anything, you may need to configure the dataset.')
-    
+        bot.send_message(
+            message.chat.id,
+            'Can\'t find anything, you may need to configure the dataset.',
+        )
 
 
 def error(message: types.Message):
