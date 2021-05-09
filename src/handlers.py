@@ -34,6 +34,7 @@ def change_dataset(message: types.Message):
             continue
         item = types.KeyboardButton('/use_dataset %s' % ds)
         markup.row(item)
+
     bot.send_message(message.chat.id, 'Choose a dataset:', reply_markup=markup)
 
 
@@ -41,11 +42,11 @@ def change_dataset(message: types.Message):
 @bot.message_handler(commands=['use_dataset'])
 def use_dataset(message: types.Message):
     ds_c = message.text.split(' ')
-    ds = ds_c[1] if ds_c.count > 1 else ''
+    ds = '' if ds_c is None or len(ds_c) <= 1 else ds_c[1]
 
     if controller.change_dataset(name=ds):
         remove_board = types.ReplyKeyboardRemove()
-        bot.send_message(message.chat.id, 'Done.', reply_markup=remove_board)
+        bot.send_message(message.chat.id, 'Dataset loaded.', reply_markup=remove_board)
     else:
         remove_board = types.ReplyKeyboardRemove()
         bot.send_message(
@@ -93,7 +94,6 @@ def handle_stickers(message: types.Message):
 @is_typing_dec
 @bot.message_handler(func=lambda m: True)
 def default_search(message: types.Message):
-    # todo logic for querie test here
     docs: list = controller.execute_query(message.text)
     if docs:
         response = 'Results:\n\n\t'
