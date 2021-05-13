@@ -152,7 +152,7 @@ def default_search(message: types.Message):
         markup = types.InlineKeyboardMarkup(row_width=3)
         for i, d in enumerate(docs):
             item = types.InlineKeyboardButton(
-                text='download %d. \n%s \n%s ' % (i + 1, d.title, d.author),
+                text='download %d. \n%s ' % (i + 1, d.title),
                 callback_data='download:%s' % (d.id),
             )
             markup.row(item)
