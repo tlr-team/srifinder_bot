@@ -29,7 +29,10 @@ class MriController:
         return 0
 
     def execute_query(self, query: str) -> List[Document]:
-        return self._model.run_query(query, top=5)
+        rank: List[Tuple[int, int]] = self._model.run_query(
+            query, roccio=self._roccio_activated, top=5
+        )
+        return list(map(lambda e: (self._documents[e[0]]), rank))
 
     def get_document_abstract(self, title):
         return [d for d in self._documents if title == d.title]

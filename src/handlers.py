@@ -34,6 +34,21 @@ def one_command_lock(f):
 
     return _internal_f
 
+
+def one_query_lock(f):
+    def _internal_f(call):
+        global lock
+        if lock:
+            bot.send_message(call.message.chat.id, 'Wait, Im bussy.')
+            return
+        lock = True
+        res = f(call)
+        lock = False
+        return res
+
+    return _internal_f
+
+
 @is_typing_dec
 @bot.message_handler(commands=['start'])
 def start(message: types.Message):
@@ -119,17 +134,23 @@ def handle_stickers(message: types.Message):
 
 
 @is_typing_dec
-@bot.message_handler(func=lambda m: True)
+@bot.message_handler(func=lambda m: m.text[0] != '/')
 @one_command_lock
 def default_search(message: types.Message):
     bot.send_message(message.chat.id, 'Please wait...')
     docs: list = controller.execute_query(message.text)
     if docs:
-        response = 'Results:\n\n\t'
-        response = response + '\n\n\t'.join(
-            ["%s : %s " % (i, d) for i, d in enumerate(docs)]
+        # build response
+        response = 'Results:'
+        response = response + '\n\n'
+        response = response + '\n\n'.join(
+            [" *%s*. ``` %s ```" % (i + 1, repr(d)) for i, d in enumerate(docs)]
         )
-        bot.send_message(message.chat.id, response)
+        response = response + '\n'
+        # send message
+        bot.send_message(
+            message.chat.id, response, parse_mode="Markdown", reply_markup=markup
+        )
     else:
         bot.send_message(
             message.chat.id,
