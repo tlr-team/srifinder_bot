@@ -1,7 +1,7 @@
 from mri.src.iomethods import load_documents, load_queries
 from mri.src.mri import IRM
 from mri.src.document import Document
-from typing import List
+from typing import List, Tuple
 
 
 class MriController:
@@ -34,8 +34,11 @@ class MriController:
         )
         return list(map(lambda e: (self._documents[e[0]]), rank))
 
-    def get_document_abstract(self, title):
-        return [d for d in self._documents if title == d.title]
+    def get_document_json(self, id: str):
+        for d in self._documents:
+            if d.id == id:
+                return d.toJson()
+        return None
 
     def set_roccio(self, activated=True):
         self._roccio_activated = activated

@@ -1,3 +1,5 @@
+import os
+from tempfile import NamedTemporaryFile
 from telebot import TeleBot, logger, types
 from .config import get_config, WELLCOME_MESSAGE, HELP_MESSAGE
 from .mri_controller import MriController
@@ -125,8 +127,6 @@ def get_report(message: types.Message):
 # Handle sticker message
 @bot.message_handler(content_types=['sticker'])
 def handle_stickers(message: types.Message):
-    # (message.sticker.file_id)
-    # bot.send_message(message.chat.id, f'{message.sticker.file_id}')
     bot.send_sticker(
         message.chat.id,
         'CAACAgQAAxkBAAOCYJTZ6sgxXMjiyaFE5kM8cvf3mF0AAkwWAAKm8XEezNf5LuZMOxYfBA',
@@ -147,6 +147,16 @@ def default_search(message: types.Message):
             [" *%s*. ``` %s ```" % (i + 1, repr(d)) for i, d in enumerate(docs)]
         )
         response = response + '\n'
+
+        # build downloads Buttons
+        markup = types.InlineKeyboardMarkup(row_width=3)
+        for i, d in enumerate(docs):
+            item = types.InlineKeyboardButton(
+                text='download %d. \n%s \n%s ' % (i + 1, d.title, d.author),
+                callback_data='download:%s' % (d.id),
+            )
+            markup.row(item)
+
         # send message
         bot.send_message(
             message.chat.id, response, parse_mode="Markdown", reply_markup=markup
@@ -158,5 +168,25 @@ def default_search(message: types.Message):
         )
 
 
-def error(message: types.Message):
-    log('<--error-->')
+@bot.callback_query_handler(func=lambda call: 'download' in call.data)
+# @one_query_lock
+def handle_download_query(call):
+    id = call.data.split(":")[1]
+    chat_id = call.message.chat.id
+    doc_json = controller.get_document_json(id)
+    if doc_json is None:
+        bot.send_message(
+            chat_id,
+            'Can\'t find a document with id(%s) in the current dataset.' % (id),
+        )
+    else:
+        bot.send_chat_action(chat_id, 'upload_document')
+        f = NamedTemporaryFile(
+            mode='w+', delete=False, prefix=f'doc{id}_', suffix='.json'
+        )
+        f.write(doc_json)
+        f.close()
+        with open(f.name, "rb") as nf:
+            bot.send_document(chat_id, nf)
+        os.unlink(f.name)  # delete the file after
+
