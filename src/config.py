@@ -29,8 +29,12 @@ Your choices are limited here, you have to choose between the commands below or 
 
 /help - Show this message.
 
-/choose_dataset - Obvious.
+/choose_dataset - Choose from the available datasets.
 
 /get_report - Upload the report of this project with the source code.
+
+/activate_roccio - Activate Roccio to be used in queries.
+
+/deactivate_roccio - Deactivate Roccio to stop using it in queries.
 
 '''
