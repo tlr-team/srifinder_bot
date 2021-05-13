@@ -19,6 +19,7 @@ class MriController:
     def __init__(self, datasets: List[str] = None):
         self.datasets = [self.CISI, self.CRAN] if datasets is None else datasets
         self._model = None
+        self._roccio_activated = False
         self._init_db(self.CISI)
 
     def change_dataset(self, name: str = CRAN):
@@ -33,6 +34,5 @@ class MriController:
     def get_document_abstract(self, title):
         return [d for d in self._documents if title == d.title]
 
-    def get_model_evaluation(self):
-        # todo: put your code here robe, i dont know what to exactly show
-        pass
+    def set_roccio(self, activated=True):
+        self._roccio_activated = activated
