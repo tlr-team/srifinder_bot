@@ -1,15 +1,16 @@
-from logging import log
-from telebot import TeleBot
-from telebot import types
+from telebot import TeleBot, logger, types
 from .config import get_config, WELLCOME_MESSAGE, HELP_MESSAGE
 from .mri_controller import MriController
 
 token, admin_users = get_config()
 bot = TeleBot(token)
+
 controller = MriController()
 
 for admin in admin_users:
     bot.send_message(admin, 'Initialized.')
+
+lock = False
 
 
 def is_typing_dec(f):
@@ -20,6 +21,19 @@ def is_typing_dec(f):
     return _internal_f
 
 
+def one_command_lock(f):
+    def _internal_f(message: types.Message):
+        global lock
+        if lock:
+            bot.reply_to(message, 'Wait, Im bussy.')
+            return
+        lock = True
+        res = f(message)
+        lock = False
+        return res
+
+    return _internal_f
+
 @is_typing_dec
 @bot.message_handler(commands=['start'])
 def start(message: types.Message):
@@ -29,35 +43,44 @@ def start(message: types.Message):
 
 @is_typing_dec
 @bot.message_handler(commands=['choose_dataset'])
+@one_command_lock
 def change_dataset(message: types.Message):
     bot.send_chat_action(message.chat.id, 'typing')
-    markup = types.ReplyKeyboardMarkup(one_time_keyboard=True, row_width=1)
+    markup = types.InlineKeyboardMarkup()
     for ds in controller.datasets:
         if ds is None or ds == '':
             continue
-        item = types.KeyboardButton('/use_dataset %s' % ds)
+        item = types.InlineKeyboardButton(text=ds, callback_data='dataset:%s' % ds)
         markup.row(item)
-
     bot.send_message(message.chat.id, 'Choose a dataset:', reply_markup=markup)
 
 
-@is_typing_dec
-@bot.message_handler(commands=['use_dataset'])
-def use_dataset(message: types.Message):
-    ds_c = message.text.split(' ')
-    ds = '' if ds_c is None or len(ds_c) <= 1 else ds_c[1]
-
-    bot.send_message(message.chat.id, 'Please wait...')
+@bot.callback_query_handler(func=lambda call: 'dataset' in call.data)
+@one_query_lock
+def use_dataset(call):
+    ds = call.data.split(':')[1]
+    chat_id = call.message.chat.id
+    bot.send_message(chat_id, 'Please wait...')
     if controller.change_dataset(name=ds):
-        remove_board = types.ReplyKeyboardRemove()
-        bot.send_message(message.chat.id, 'Dataset loaded.', reply_markup=remove_board)
+        bot.send_message(chat_id, 'Dataset loaded.')
     else:
-        remove_board = types.ReplyKeyboardRemove()
-        bot.send_message(
-            message.chat.id,
-            'I can\'t find the dataset "%s".' % (ds),
-            reply_markup=remove_board,
-        )
+        bot.send_message(chat_id, 'I can\'t find the dataset "%s".' % (ds))
+
+
+@is_typing_dec
+@bot.message_handler(commands=['activate_roccio'])
+@one_command_lock
+def activate_roccio(message: types.Message):
+    controller.set_roccio(activated=True)
+    bot.send_message(message.chat.id, 'Activated roccio on queries')
+
+
+@is_typing_dec
+@bot.message_handler(commands=['deactivate_roccio'])
+@one_command_lock
+def deactivate_roccio(message: types.Message):
+    controller.set_roccio(activated=False)
+    bot.send_message(message.chat.id, 'Deactivated roccio on queries')
 
 
 @is_typing_dec
@@ -97,6 +120,7 @@ def handle_stickers(message: types.Message):
 
 @is_typing_dec
 @bot.message_handler(func=lambda m: True)
+@one_command_lock
 def default_search(message: types.Message):
     bot.send_message(message.chat.id, 'Please wait...')
     docs: list = controller.execute_query(message.text)
